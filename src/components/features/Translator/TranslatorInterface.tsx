@@ -30,7 +30,7 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
     // Local state
     const [result, setResult] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
-    const [availability, setAvailability] = useState<'readily' | 'after-download' | 'no' | 'loading'>('loading');
+    const [availability, setAvailability] = useState<'available' | 'downloadable' | 'downloading' | 'unavailable' | 'loading'>('loading');
 
     const [inputText, setInputText] = useState(initialInput || '');
     const [sourceLang, setSourceLang] = useState('auto');
@@ -59,9 +59,9 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
         if (typeof Translator !== 'undefined') {
             Translator.availability({ sourceLanguage: 'en', targetLanguage: 'ja' })
                 .then(available => setAvailability(available))
-                .catch(() => setAvailability('no'));
+                .catch(() => setAvailability('unavailable'));
         } else {
-            setAvailability('no');
+            setAvailability('unavailable');
         }
     }, []);
 
@@ -164,7 +164,7 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (availability === ('no' as any)) {
+    if (availability === 'unavailable') {
         return (
             <div className="translator-container empty-state">
                 <div className="empty-state-content">

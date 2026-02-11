@@ -3,7 +3,7 @@ import { checkAI, generateText, generateTextStream } from '../services/ai';
 import type { DownloadProgress } from '../services/ai';
 
 export const useAI = () => {
-    const [availability, setAvailability] = useState<'readily' | 'after-download' | 'no' | 'loading'>('loading');
+    const [availability, setAvailability] = useState<'available' | 'downloadable' | 'downloading' | 'unavailable' | 'loading'>('loading');
     const [error, setError] = useState<string | null>(null);
     const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);

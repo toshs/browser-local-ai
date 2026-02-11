@@ -3,14 +3,14 @@ import type { OnDownloadProgress } from "./index";
 
 let detector: AILanguageDetectorSession | null = null;
 
-export const checkLanguageDetector = async (): Promise<'readily' | 'after-download' | 'no'> => {
+export const checkLanguageDetector = async (): Promise<'available' | 'downloadable' | 'downloading' | 'unavailable'> => {
     if (typeof LanguageDetector === 'undefined') {
-        return 'no';
+        return 'unavailable';
     }
     try {
         return await LanguageDetector.availability();
     } catch {
-        return 'no';
+        return 'unavailable';
     }
 };
 

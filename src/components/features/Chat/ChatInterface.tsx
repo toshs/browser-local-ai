@@ -169,7 +169,7 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
                         <p>Ask me anything...</p>
                         <span className={`badge ${availability}`}>AI Status: {availability}</span>
-                        {availability === 'no' && (
+                        {availability === 'unavailable' && (
                             <p style={{ fontSize: '0.8rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
                                 Note: The Prompt API is currently only available in the Chrome Extension version or browsers with the API explicitly enabled.
                             </p>
@@ -259,7 +259,7 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                 />
                 <button
                     onClick={loading ? handleStop : handleSend}
-                    disabled={(!input.trim() && !loading) || availability === 'no'}
+                    disabled={(!input.trim() && !loading) || availability === 'unavailable'}
                     className={loading ? "stop-btn" : "primary"}
                 >
                     {loading ? <StopCircle size={18} /> : <Send size={18} />}

@@ -12,8 +12,8 @@ interface SummarizerInterfaceProps {
 }
 
 export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) => {
-    // Hooks return { availability, summarize, error, downloadProgress }
-    const { availability, summarize, error: hookError, downloadProgress } = useSummarizer();
+    // Hooks return { availability, summarizeStreaming, error, downloadProgress }
+    const { availability, summarizeStreaming, error: hookError, downloadProgress } = useSummarizer();
 
     // Local state for results since hook doesn't store them
     const [result, setResult] = useState<string>('');
@@ -25,6 +25,7 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
     const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
     const [format, setFormat] = useState<'markdown' | 'plain-text'>('markdown');
     const [outputLanguage, setOutputLanguage] = useState('en');
+    const [context, setContext] = useState(''); // New context state
     const [copied, setCopied] = useState(false);
 
     const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -56,10 +57,9 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
         if (!inputText.trim()) return;
         setIsLoading(true);
         setError(null);
+        setResult(''); // Clear previous result
+
         try {
-            // Add explicit language instruction to context/prompt effectively
-            // Since 'expectedLanguage' might be flaky, we reinforce it via sharedContext or the input itself if the API allows.
-            // For now, we rely on passing it to options, but let's check if we can pass a context with language instruction.
             const languageNames: Record<string, string> = {
                 'en': 'English',
                 'ja': 'Japanese',
@@ -67,16 +67,33 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
             };
             const langName = languageNames[outputLanguage] || outputLanguage;
 
-            const summary = await summarize(inputText, {
+            // Use streaming by default for better UX
+            const stream = summarizeStreaming(inputText, {
                 type,
                 length,
                 format,
-                expectedLanguage: outputLanguage,
-                sharedContext: `Output must be in ${langName}.`
+                outputLanguage: outputLanguage,
+                expectedInputLanguages: ['en', 'ja', 'es'], // Support common languages
+                expectedContextLanguages: ['en', 'ja', 'es'],
+                sharedContext: `The user expects the output in ${langName}.`,
+            }, {
+                context: context.trim() || undefined
             });
-            setResult(summary);
-        } catch (e) {
-            // Error handled by hook or caught here
+
+            for await (const chunk of stream) {
+                setResult((prev) => {
+                    if (!prev) return chunk;
+                    // If the new chunk contains the previous text, it's an accumulated update
+                    if (chunk.startsWith(prev)) {
+                        return chunk;
+                    }
+                    // Otherwise, we assume it's a delta and append it
+                    return prev + chunk;
+                });
+            }
+        } catch (e: any) {
+            console.error(e);
+            setError(e.message || 'Failed to summarize');
         } finally {
             setIsLoading(false);
         }
@@ -89,7 +106,7 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (availability === ('no' as any)) { // Force check since type overlap issue might exist
+    if (availability === 'unavailable') {
         return (
             <div className="summarizer-container empty-state">
                 <div className="empty-state-content">
@@ -99,6 +116,17 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
                 </div>
             </div>
         );
+    }
+
+    if (availability === 'loading') {
+        return (
+            <div className="summarizer-container empty-state">
+                <div className="empty-state-content">
+                    <Loader2 className="animate-spin text-muted" size={48} />
+                    <h3>Checking API Availability...</h3>
+                </div>
+            </div>
+        )
     }
 
     // Define options with descriptions
@@ -166,12 +194,20 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
                         placeholder="Paste text or content to summarize..."
                         className="source-input"
                     />
+                    <textarea
+                        value={context}
+                        onChange={(e) => setContext(e.target.value)}
+                        placeholder="Optional: Add context (e.g. 'Targeting expert audience')"
+                        className="context-input"
+                        rows={2}
+                        style={{ marginTop: '8px', fontSize: '0.9em', minHeight: '60px' }}
+                    />
                 </div>
 
                 <button
                     className="summarize-btn"
                     onClick={handleSummarize}
-                    disabled={isLoading || !inputText.trim() || availability === ('no' as any)}
+                    disabled={isLoading || !inputText.trim()}
                 >
                     {isLoading ? (
                         <>

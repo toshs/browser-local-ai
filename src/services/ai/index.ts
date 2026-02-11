@@ -84,7 +84,6 @@ export const generateTextStream = async function* (
         const stream = session.promptStreaming(prompt, { signal });
         const reader = stream.getReader();
 
-        let previousText = '';
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
