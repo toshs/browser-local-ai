@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslator } from '../../../hooks/useTranslator';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import {
-    Languages,
-    ArrowLeftRight,
+    ArrowRightLeft,
     Copy,
     Check,
     Loader2,
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react';
 import { SUPPORTED_LANGUAGES } from '../../../services/ai/translate';
 import { detectLanguage } from '../../../services/ai/detect';
+import { LanguageSelector } from '../../ui/LanguageSelector';
 import './TranslatorInterface.css';
 
 interface TranslatorInterfaceProps {
@@ -28,7 +28,6 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
     // Local state
     const [result, setResult] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
-    // availability needed manually since hook doesn't provide a continuous state for it, or we check on mount
     const [availability, setAvailability] = useState<'readily' | 'after-download' | 'no' | 'loading'>('loading');
 
     const [inputText, setInputText] = useState(initialInput || '');
@@ -41,7 +40,17 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
     const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevInputRef = useRef(inputText);
 
-    const isDesktop = useMediaQuery('(min-width: 768px)');
+    const isDesktop = useMediaQuery('(min-width: 900px)'); // Increased breakpoint for 3-col layout
+
+    // Initialize target language based on browser detection
+    useEffect(() => {
+        const browserLang = navigator.language.split('-')[0];
+        // Check if browser lang is supported
+        const isSupported = SUPPORTED_LANGUAGES.some(lang => lang.code === browserLang);
+        if (isSupported) {
+            setTargetLang(browserLang);
+        }
+    }, []);
 
     // Check availability on mount
     useEffect(() => {
@@ -118,8 +127,12 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
 
         setIsLoading(true);
         try {
-            const res = await translate(inputText, { sourceLanguage: actualSource, targetLanguage: targetLang });
-            setResult(res);
+            // Replace newlines with <br> tags to preserve formatting
+            const formattedInput = inputText.replace(/\n/g, '<br>');
+            const res = await translate(formattedInput, { sourceLanguage: actualSource, targetLanguage: targetLang });
+            // Revert <br> tags back to newlines for display
+            const formattedResult = res.replace(/<br\s*\/?>/gi, '\n');
+            setResult(formattedResult);
         } catch (e) {
             // error handled by hook
         } finally {
@@ -133,7 +146,6 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
                 setSourceLang(targetLang);
                 setTargetLang(detectedLang);
             }
-            // if auto and no detection, can't easily swap
             return;
         }
         setSourceLang(targetLang);
@@ -162,73 +174,58 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
         );
     }
 
+    const languageOptions = [
+        { code: 'auto', name: '✨ Auto' },
+        ...SUPPORTED_LANGUAGES
+    ];
+
     return (
-        <div className={`translator-container ${isDesktop ? 'desktop-split' : ''}`}>
+        <div className={`translator-container ${isDesktop ? 'desktop-3-col' : ''}`}>
 
-            <div className="input-section">
-                <div className="language-selector">
-                    <select
-                        value={sourceLang}
-                        onChange={(e) => { setSourceLang(e.target.value); setDetectedLang(null); }}
-                        className="lang-select"
-                    >
-                        <option value="auto">🔍 Auto Detect</option>
-                        {SUPPORTED_LANGUAGES.map(lang => (
-                            <option key={lang.code} value={lang.code}>
-                                {lang.name}
-                            </option>
-                        ))}
-                    </select>
+            {/* Column 1 (Desktop) / Top (Mobile): Input */}
+            <div className="layout-section input-section">
+                <textarea
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    placeholder="Enter text..."
+                    className="source-input"
+                />
+            </div>
 
-                    <button
-                        className="swap-btn"
-                        onClick={handleSwapLanguages}
-                        title="Swap languages"
-                        disabled={sourceLang === 'auto' && !detectedLang}
-                    >
-                        <ArrowLeftRight size={16} />
-                    </button>
+            {/* Column 2 (Desktop) / Middle (Mobile): Controls */}
+            <div className="layout-section controls-section">
+                <div className="controls-wrapper">
+                    <div className="lang-selectors-group">
+                        <LanguageSelector
+                            value={sourceLang}
+                            onChange={(val) => { setSourceLang(val); setDetectedLang(null); }}
+                            options={languageOptions}
+                            suffix={sourceLang === 'auto' && detectedLang ? (SUPPORTED_LANGUAGES.find(l => l.code === detectedLang)?.name || detectedLang) : undefined}
+                            className="lang-select-wrapper"
+                        />
 
-                    <select
-                        value={targetLang}
-                        onChange={(e) => setTargetLang(e.target.value)}
-                        className="lang-select"
-                    >
-                        {SUPPORTED_LANGUAGES.map(lang => (
-                            <option key={lang.code} value={lang.code}>
-                                {lang.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                        <button
+                            className="swap-btn"
+                            onClick={handleSwapLanguages}
+                            title="Swap languages"
+                            disabled={sourceLang === 'auto' && !detectedLang}
+                        >
+                            <ArrowRightLeft size={18} />
+                        </button>
 
-                {(detectedLang || detecting) && (
-                    <div className="detected-lang-info">
-                        <Search size={12} style={{ marginRight: 4 }} />
-                        {detecting ? (
-                            <span>Detecting...</span>
-                        ) : (
-                            <span>Detected: {SUPPORTED_LANGUAGES.find(l => l.code === detectedLang)?.name || detectedLang}</span>
-                        )}
-                        {detectedLang && sourceLang === 'auto' && (
-                            <button
-                                className="text-btn"
-                                onClick={() => setSourceLang(detectedLang)}
-                                style={{ marginLeft: 8 }}
-                            >
-                                Use
-                            </button>
-                        )}
+                        <LanguageSelector
+                            value={targetLang}
+                            onChange={setTargetLang}
+                            options={SUPPORTED_LANGUAGES}
+                            className="lang-select-wrapper"
+                        />
                     </div>
-                )}
-
-                <div className="input-area">
-                    <textarea
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        placeholder="Enter text to translate..."
-                        className="source-input"
-                    />
+                    {detecting && (
+                        <div className="detected-lang-info">
+                            <Search size={12} style={{ marginRight: 4 }} />
+                            <span>Detecting...</span>
+                        </div>
+                    )}
                 </div>
 
                 <button
@@ -242,18 +239,16 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
                             <span>Translating...</span>
                         </>
                     ) : (
-                        <>
-                            <Languages size={16} />
-                            <span>Translate</span>
-                        </>
+                        <span>Translate</span>
                     )}
                 </button>
             </div>
 
-            <div className={`result-section ${!result && !isDesktop ? 'mobile-hidden-result' : ''}`}>
+            {/* Column 3 (Desktop) / Bottom (Mobile): Result */}
+            <div className="layout-section result-section">
                 <div className="translation-result">
                     <div className="result-header">
-                        <span className="result-label">Translation</span>
+                        <span className="result-label">Result</span>
                         <button
                             className="action-btn icon-only"
                             onClick={copyToClipboard}

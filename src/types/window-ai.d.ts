@@ -44,6 +44,7 @@ export interface AISummarizerCreateOptions {
     length?: 'short' | 'medium' | 'long';
     monitor?: (monitor: AIMonitor) => void;
     signal?: AbortSignal;
+    expectedLanguage?: string;
 }
 
 export interface AISummarizerSession {

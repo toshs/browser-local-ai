@@ -1,3 +1,7 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 :root {
   --bg-color: hsl(120, 10%, 98%);
   --surface-color: hsl(120, 8%, 94%);

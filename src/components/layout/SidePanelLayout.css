@@ -17,30 +17,8 @@ html, body, #root {
 
 /* Desktop Web Mode */
 .layout-container.web-mode {
-    max-width: 1000px; /* Allow wider width for side-by-side content */
-    box-shadow: 0 0 20px rgba(0,0,0,0.05);
-}
-
-/* Ensure full width on mobile or narrow contexts (like side panel) */
-@media (max-width: 600px) {
-  .layout-container.web-mode {
+    max-width: none; /* Remove max-width constraint */
     box-shadow: none;
-  }
-}
-
-.layout-nav.top {
-    border-bottom: 1px solid var(--border-color);
-    border-top: none;
-    background: var(--surface-color);
-    padding: var(--spacing-xs);
-    display: flex;
-    flex-shrink: 0;
-    justify-content: center; /* Center nav items */
-}
-
-/* Nav Link Styles setup to match previous button styles */
-a.nav-item {
-    text-decoration: none;
 }
 
 .layout-header {
@@ -49,7 +27,17 @@ a.nav-item {
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between; /* Space between Logo and Nav */
+  background: var(--surface-color);
+  height: 60px; /* Fixed height for consistency */
+}
+
+/* Header Navigation (Desktop) */
+.header-nav {
+    display: none; /* Hidden by default (mobile) */
+    gap: var(--spacing-md);
+    height: 100%;
+    align-items: center;
 }
 
 .layout-content {
@@ -57,8 +45,15 @@ a.nav-item {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto; /* Allow content to grow and scroll on mobile */
   padding: var(--spacing-md);
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .layout-content {
+    overflow: hidden; /* Lock height on desktop for fixed layouts */
+  }
 }
 
 .layout-content > * {
@@ -66,26 +61,29 @@ a.nav-item {
   min-height: 0;
 }
 
+/* Bottom Navigation (Mobile/Extension) */
 .layout-nav {
   display: flex;
   flex-shrink: 0;
   border-top: 1px solid var(--border-color);
   background: var(--surface-color);
   padding: var(--spacing-xs);
+  justify-content: space-around;
 }
 
+/* Base Nav Item Styles */
 .nav-item {
-  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: transparent;
   color: var(--text-secondary);
-  gap: 4px;
-  font-size: 0.75rem;
-  padding: var(--spacing-sm);
+  gap: 6px;
+  font-size: 0.85rem;
+  padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all 0.2s;
 }
 
 .nav-item:hover {
@@ -96,16 +94,44 @@ a.nav-item {
 .nav-item.active {
   color: var(--primary-color);
   background: hsla(152, 60%, 42%, 0.1);
+  font-weight: 500;
+}
+
+/* Mobile Nav Item specific styles (stacked icon/text) */
+.layout-nav .nav-item {
+    flex-direction: column;
+    font-size: 0.75rem;
+    padding: var(--spacing-sm);
+    gap: 4px;
+    flex: 1;
 }
 
 .logo-text {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   background: linear-gradient(to right, hsl(152, 60%, 42%), hsl(170, 55%, 45%));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
+}
+
+/* Desktop Queries */
+@media (min-width: 768px) {
+    .header-nav {
+        display: flex; /* Show header nav on desktop */
+    }
+
+    .layout-nav.mobile-only {
+        display: none; /* Hide bottom nav on desktop if marked mobile-only */
+    }
+
+    /* Adjust nav item styles for header placement */
+    .header-nav .nav-item {
+        flex-direction: row;
+        height: auto;
+        padding: 6px 16px;
+    }
 }
 
 /* Markdown body styles */
@@ -115,57 +141,12 @@ a.nav-item {
   text-align: left;
   word-wrap: break-word;
 }
-
-.markdown-body h1, .markdown-body h2, .markdown-body h3 {
-  margin: 0.5rem 0 0.25rem;
-  font-weight: 600;
-}
-
-.markdown-body h1 { font-size: 1.2rem; }
-.markdown-body h2 { font-size: 1.05rem; }
-.markdown-body h3 { font-size: 0.95rem; }
-
-.markdown-body p {
-  margin: 0.25rem 0;
-}
-
-.markdown-body ul, .markdown-body ol {
-  margin: 0.25rem 0;
-  padding-left: 1.25rem;
-}
-
-.markdown-body li {
-  margin: 0.1rem 0;
-}
-
-.markdown-body code {
-  background: hsla(0, 0%, 0%, 0.06);
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
-  font-size: 0.85em;
-  font-family: 'SFMono-Regular', Consolas, monospace;
-}
-
-.markdown-body pre {
-  background: hsla(0, 0%, 0%, 0.06);
-  padding: 0.5rem;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 0.5rem 0;
-}
-
-.markdown-body pre code {
-  background: none;
-  padding: 0;
-}
-
-.markdown-body strong {
-  font-weight: 600;
-}
-
-.markdown-body blockquote {
-  border-left: 3px solid var(--primary-color);
-  margin: 0.5rem 0;
-  padding: 0.25rem 0.75rem;
-  color: var(--text-secondary);
-}
+.markdown-body h1, .markdown-body h2, .markdown-body h3 { margin: 0.5rem 0 0.25rem; font-weight: 600; }
+.markdown-body p { margin: 0.25rem 0; }
+.markdown-body ul, .markdown-body ol { margin: 0.25rem 0; padding-left: 1.25rem; }
+.markdown-body li { margin: 0.1rem 0; }
+.markdown-body code { background: hsla(0, 0%, 0%, 0.06); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.85em; font-family: 'SFMono-Regular', Consolas, monospace; }
+.markdown-body pre { background: hsla(0, 0%, 0%, 0.06); padding: 0.5rem; border-radius: 6px; overflow-x: auto; margin: 0.5rem 0; }
+.markdown-body pre code { background: none; padding: 0; }
+.markdown-body strong { font-weight: 600; }
+.markdown-body blockquote { border-left: 3px solid var(--primary-color); margin: 0.5rem 0; padding: 0.25rem 0.75rem; color: var(--text-secondary); }

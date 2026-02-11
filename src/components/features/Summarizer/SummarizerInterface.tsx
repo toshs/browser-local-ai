@@ -3,6 +3,7 @@ import { useSummarizer } from '../../../hooks/useSummarizer';
 import { Loader2, Copy, Check, FileText, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { OptionSelector, type Option } from '../../ui/OptionSelector';
 import './SummarizerInterface.css';
 
 interface SummarizerInterfaceProps {
@@ -22,6 +23,7 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
     const [type, setType] = useState<'key-points' | 'tldr' | 'teaser' | 'headline'>('key-points');
     const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
     const [format, setFormat] = useState<'markdown' | 'plain-text'>('markdown');
+    const [outputLanguage, setOutputLanguage] = useState('en');
     const [copied, setCopied] = useState(false);
 
     const isDesktop = useMediaQuery('(min-width: 768px)');
@@ -31,7 +33,18 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
         if (hookError) setError(hookError);
     }, [hookError]);
 
-    // Effect to update inputText if initialInput changes (e.g. from context menu)
+    // Initialize output language based on browser detection if possible, or default to English
+    useEffect(() => {
+        const browserLang = navigator.language.split('-')[0];
+        // The error message says supported codes are [en, es, ja]
+        // We can try to match browser lang to these, otherwise default to 'en'
+        const supported = ['en', 'es', 'ja'];
+        if (supported.includes(browserLang)) {
+            setOutputLanguage(browserLang);
+        }
+    }, []);
+
+    // Effect to updateinputText if initialInput changes (e.g. from context menu)
     useEffect(() => {
         if (initialInput) {
             setInputText(initialInput);
@@ -43,10 +56,22 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
         setIsLoading(true);
         setError(null);
         try {
+            // Add explicit language instruction to context/prompt effectively
+            // Since 'expectedLanguage' might be flaky, we reinforce it via sharedContext or the input itself if the API allows.
+            // For now, we rely on passing it to options, but let's check if we can pass a context with language instruction.
+            const languageNames: Record<string, string> = {
+                'en': 'English',
+                'ja': 'Japanese',
+                'es': 'Spanish'
+            };
+            const langName = languageNames[outputLanguage] || outputLanguage;
+
             const summary = await summarize(inputText, {
                 type,
                 length,
-                format
+                format,
+                expectedLanguage: outputLanguage,
+                sharedContext: `Output must be in ${langName}.`
             });
             setResult(summary);
         } catch (e) {
@@ -75,34 +100,59 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
         );
     }
 
+    // Define options with descriptions
+    const typeOptions: Option[] = [
+        { value: 'key-points', label: 'Key Points', description: 'Extracts the main points.' },
+        { value: 'tldr', label: 'TL;DR', description: 'Too Long; Didn\'t Read. A very concise summary.' },
+        { value: 'teaser', label: 'Teaser', description: 'A short preview to entice reading.' },
+        { value: 'headline', label: 'Headline', description: 'A single, catchy headline.' }
+    ];
+
+    const lengthOptions: Option[] = [
+        { value: 'short', label: 'Short', description: 'Brief and to the point.' },
+        { value: 'medium', label: 'Medium', description: 'Balanced detail.' },
+        { value: 'long', label: 'Long', description: 'Detailed summary.' }
+    ];
+
+    const formatOptions: Option[] = [
+        { value: 'markdown', label: 'Markdown', description: 'Formatted text.' },
+        { value: 'plain-text', label: 'Plain Text', description: 'Simple text.' }
+    ];
+
+    const languageOptions: Option[] = [
+        { value: 'en', label: 'English', description: 'English.' },
+        { value: 'ja', label: 'Japanese', description: '日本語。' },
+        { value: 'es', label: 'Spanish', description: 'Español.' }
+    ];
+
     return (
         <div className={`summarizer-container ${isDesktop ? 'desktop-split' : ''}`}>
             <div className="input-section">
                 <div className="controls-group">
-                    <div className="control-item">
-                        <label>Type</label>
-                        <select value={type} onChange={(e) => setType(e.target.value as any)}>
-                            <option value="key-points">Key Points</option>
-                            <option value="tldr">TL;DR</option>
-                            <option value="teaser">Teaser</option>
-                            <option value="headline">Headline</option>
-                        </select>
-                    </div>
-                    <div className="control-item">
-                        <label>Length</label>
-                        <select value={length} onChange={(e) => setLength(e.target.value as any)}>
-                            <option value="short">Short</option>
-                            <option value="medium">Medium</option>
-                            <option value="long">Long</option>
-                        </select>
-                    </div>
-                    <div className="control-item">
-                        <label>Format</label>
-                        <select value={format} onChange={(e) => setFormat(e.target.value as any)}>
-                            <option value="markdown">Markdown</option>
-                            <option value="plain-text">Plain Text</option>
-                        </select>
-                    </div>
+                    <OptionSelector
+                        label="Type"
+                        value={type}
+                        onChange={(val: string) => setType(val as any)}
+                        options={typeOptions}
+                    />
+                    <OptionSelector
+                        label="Length"
+                        value={length}
+                        onChange={(val: string) => setLength(val as any)}
+                        options={lengthOptions}
+                    />
+                    <OptionSelector
+                        label="Format"
+                        value={format}
+                        onChange={(val: string) => setFormat(val as any)}
+                        options={formatOptions}
+                    />
+                    <OptionSelector
+                        label="Output Language"
+                        value={outputLanguage}
+                        onChange={(val: string) => setOutputLanguage(val)}
+                        options={languageOptions}
+                    />
                 </div>
 
                 <div className="input-area">
