@@ -13,7 +13,7 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
             {isWeb && (
                 <header className="layout-header">
                     <div className="logo-container">
-                        <img src="/icon.png" alt="Browser Local AI Logo" className="logo-icon" />
+                        <img src="./icon.png" alt="Browser Local AI Logo" className="logo-icon" />
                         <h1 className="logo-text">Browser Local AI</h1>
                     </div>
 
