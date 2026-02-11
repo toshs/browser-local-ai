@@ -1,26 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAI } from '../../../hooks/useAI';
-import { Send, Download, Copy, Check, Zap, Radio } from 'lucide-react';
+import { useChatHistory, Message } from '../../../hooks/useChatHistory';
+import { Send, Download, Copy, Check, Zap, Radio, StopCircle, Plus, History, Trash2, X } from 'lucide-react';
+import './ChatInterface.css';
 import * as smd from 'streaming-markdown';
 
-interface Message {
-    id: string;
-    role: 'user' | 'ai';
-    text: string;
-    timestamp: number;
-}
 
 interface ChatInterfaceProps {
     initialInput?: string;
 }
 
 export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
-    const { availability, promptText, streamText, downloadProgress } = useAI();
-    const [messages, setMessages] = useState<Message[]>([]);
+    const { availability, promptText, streamText, abort, downloadProgress } = useAI();
+    const { currentSession, createNewSession, addMessageToSession, sessions, selectSession, deleteSession } = useChatHistory();
+    // const [messages, setMessages] = useState<Message[]>([]); // Now using currentSession.messages
     const [input, setInput] = useState(initialInput || '');
     const [loading, setLoading] = useState(false);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [useStreaming, setUseStreaming] = useState(true);
+    const [showHistory, setShowHistory] = useState(false);
     const endRef = useRef<HTMLDivElement>(null);
     const streamTargetRef = useRef<HTMLDivElement>(null);
     const parserRef = useRef<smd.Parser | null>(null);
@@ -38,62 +36,90 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         setTimeout(() => setCopiedId(null), 2000);
     }, []);
 
-    const handleSendStreaming = async (userMsg: Message) => {
-        const aiMsgId = (Date.now() + 1).toString();
-        let fullText = '';
-
-        try {
-            await streamText(userMsg.text, (chunk) => {
-                fullText += chunk;
-                if (parserRef.current) {
-                    smd.parser_write(parserRef.current, chunk);
-                }
-            });
-
-            if (parserRef.current) {
-                smd.parser_end(parserRef.current);
-                parserRef.current = null;
-            }
-
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: fullText, timestamp: Date.now() }]);
-        } catch (_e) {
-            if (parserRef.current) {
-                smd.parser_end(parserRef.current);
-                parserRef.current = null;
-            }
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: "Error: Could not generate response.", timestamp: Date.now() }]);
-        }
-    };
-
-    const handleSendPrompt = async (userMsg: Message) => {
+    const handleSendStreaming = async (text: string) => {
+        if (!currentSession) return;
         const aiMsgId = (Date.now() + 1).toString();
 
-        try {
-            const response = await promptText(userMsg.text);
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: response, timestamp: Date.now() }]);
-        } catch (_e) {
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai', text: "Error: Could not generate response.", timestamp: Date.now() }]);
-        }
+        // Optimistically add empty AI message for streaming
+        // Actually, we can't easily update the message in place with useChatHistory nicely without a lot of updates.
+        // Better to keep local state for streaming, then save to history on completion?
+        // OR: Update history repeatedly. Let's try update history repeatedly but debounced? 
+        // For simplicity: We will build the string locally, then add to session at the end.
+        // BUT: We want to show it streaming. 
+        // HYBRID: We have a "streamingMessage" state.
     };
+
+    const handleSendPrompt = async (text: string) => { };
+
+    // We need a local state for the streaming content that hasn't been saved to history yet
+    const [streamingContent, setStreamingContent] = useState<string | null>(null);
 
     const handleSend = async () => {
-        if (!input.trim() || loading) return;
+        if (!input.trim() || loading || !currentSession) return;
 
-        const userMsg: Message = { id: Date.now().toString(), role: 'user', text: input, timestamp: Date.now() };
-        setMessages(prev => [...prev, userMsg]);
+        const userText = input;
+        const userMsg: Message = { id: Date.now().toString(), role: 'user', text: userText, timestamp: Date.now() };
+
+        addMessageToSession(currentSession.id, userMsg);
         setInput('');
         setLoading(true);
 
         try {
             if (useStreaming) {
-                await handleSendStreaming(userMsg);
+                let fullText = '';
+                setStreamingContent(''); // Start streaming
+
+                await streamText(userText, (chunk) => {
+                    fullText += chunk;
+                    setStreamingContent(prev => (prev || '') + chunk);
+
+                    if (parserRef.current) {
+                        smd.parser_write(parserRef.current, chunk);
+                    }
+                });
+
+                if (parserRef.current) {
+                    smd.parser_end(parserRef.current);
+                    parserRef.current = null;
+                }
+
+                const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: fullText, timestamp: Date.now() };
+                addMessageToSession(currentSession.id, aiMsg);
+
             } else {
-                await handleSendPrompt(userMsg);
+                const response = await promptText(userText);
+                const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: response, timestamp: Date.now() };
+                addMessageToSession(currentSession.id, aiMsg);
+            }
+        } catch (e: any) {
+            if (e.name !== 'AbortError') {
+                const errorMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: "Error: Could not generate response.", timestamp: Date.now() };
+                addMessageToSession(currentSession.id, errorMsg);
+            } else {
+                // If aborted, save what we have so far
+                if (useStreaming && streamingContent) { // streamingContent ref might be better but state is usually fine here as we await
+                    const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: streamingContent + " [Aborted]", timestamp: Date.now() };
+                    addMessageToSession(currentSession.id, aiMsg);
+                }
             }
         } finally {
+            if (parserRef.current) {
+                smd.parser_end(parserRef.current);
+                parserRef.current = null;
+            }
+            setStreamingContent(null);
             setLoading(false);
         }
     };
+
+    const handleStop = () => {
+        abort();
+        setLoading(false);
+        // Save partial? The catch block handles it if abort throws. 
+        // useAI throws AbortError.
+    };
+
+    const messages = currentSession?.messages || [];
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -113,7 +139,46 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         : null;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            {/* Header controls */}
+            <div className="chat-header-controls">
+                <button className="icon-btn" onClick={() => setShowHistory(!showHistory)} title="History">
+                    <History size={18} />
+                </button>
+                <div style={{ flex: 1, textAlign: 'center', fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {currentSession?.title || 'New Chat'}
+                </div>
+                <button className="icon-btn" onClick={() => createNewSession()} title="New Chat">
+                    <Plus size={18} />
+                </button>
+            </div>
+
+            {/* History Sidebar/Overlay */}
+            {showHistory && (
+                <div className="history-overlay">
+                    <div className="history-header">
+                        <span>Chat History</span>
+                        <button onClick={() => setShowHistory(false)}><X size={18} /></button>
+                    </div>
+                    <div className="history-list">
+                        {sessions.map(session => (
+                            <div
+                                key={session.id}
+                                className={`history-item ${session.id === currentSession?.id ? 'active' : ''}`}
+                                onClick={() => { selectSession(session.id); setShowHistory(false); }}
+                            >
+                                <span className="history-title">{session.title}</span>
+                                <button
+                                    className="history-delete"
+                                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.5rem' }}>
                 {messages.length === 0 && !loading && (
                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
@@ -174,7 +239,8 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                                 </div>
                             </div>
                         )}
-                        {useStreaming ? (
+                        )}
+                        {streamingContent !== null ? (
                             <div style={{
                                 alignSelf: 'flex-start', maxWidth: '85%',
                                 background: 'var(--surface-color)',
@@ -183,9 +249,12 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                                 <div ref={streamTargetRef} className="markdown-body" />
                             </div>
                         ) : (
-                            <div style={{ alignSelf: 'flex-start', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem' }}>
-                                Thinking...
-                            </div>
+                            // Thinking state if not streaming yet
+                            useStreaming ? null : (
+                                <div style={{ alignSelf: 'flex-start', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem' }}>
+                                    Thinking...
+                                </div>
+                            )
                         )}
                     </>
                 )}
@@ -217,8 +286,12 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                     rows={3}
                     style={{ resize: 'vertical', minHeight: '60px', padding: '0.75rem' }}
                 />
-                <button onClick={handleSend} disabled={loading || !input.trim() || availability === 'no'} className="primary">
-                    <Send size={18} />
+                <button
+                    onClick={loading ? handleStop : handleSend}
+                    disabled={(!input.trim() && !loading) || availability === 'no'}
+                    className={loading ? "stop-btn" : "primary"}
+                >
+                    {loading ? <StopCircle size={18} /> : <Send size={18} />}
                 </button>
             </div>
         </div>
