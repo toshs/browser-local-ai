@@ -24,8 +24,12 @@ let currentSession: AILanguageModelSession | null = null;
 const ensureSession = async (onProgress?: OnDownloadProgress): Promise<AILanguageModelSession> => {
     if (!currentSession) {
         console.log('[AI] Creating new session...');
+        // Lower temperature and topK for much more stable and coherent output.
+        // temperature: 0 makes it deterministic (focused), topK: 1 picks the most likely word.
         currentSession = await LanguageModel.create({
-            systemPrompt: "You are a helpful and concise AI assistant running inside a browser extension. Respond directly and accurately to the user's request. Keep answers focused.",
+            systemPrompt: "You are a helpful, clear, and concise assistant. Always respond in the language used by the user.",
+            temperature: 0.2,
+            topK: 5,
             monitor(m: AIMonitor) {
                 m.addEventListener('downloadprogress', (e) => {
                     console.log(`[AI] Downloaded ${e.loaded} / ${e.total}`);
