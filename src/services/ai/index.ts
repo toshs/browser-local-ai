@@ -25,6 +25,7 @@ const ensureSession = async (onProgress?: OnDownloadProgress): Promise<AILanguag
     if (!currentSession) {
         console.log('[AI] Creating new session...');
         currentSession = await LanguageModel.create({
+            systemPrompt: "You are a helpful and concise AI assistant running inside a browser extension. Respond directly and accurately to the user's request. Keep answers focused.",
             monitor(m: AIMonitor) {
                 m.addEventListener('downloadprogress', (e) => {
                     console.log(`[AI] Downloaded ${e.loaded} / ${e.total}`);

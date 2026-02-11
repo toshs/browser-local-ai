@@ -10,10 +10,10 @@ interface SidePanelLayoutProps {
 export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProps) => {
     return (
         <div className={`layout-container ${isWeb ? 'web-mode' : ''}`}>
-            <header className="layout-header">
-                <h1 className="logo-text">Browser Local AI</h1>
+            {isWeb && (
+                <header className="layout-header">
+                    <h1 className="logo-text">Browser Local AI</h1>
 
-                {isWeb && (
                     <nav className="header-nav">
                         <NavLink to="/summarize" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                             <FileText size={18} />
@@ -24,8 +24,8 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
                             <span>Translate</span>
                         </NavLink>
                     </nav>
-                )}
-            </header>
+                </header>
+            )}
 
             <main className="layout-content">
                 {children}
@@ -34,10 +34,6 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
             {/* Bottom Nav for Mobile / Extension only */}
             {!isWeb && (
                 <nav className="layout-nav">
-                    <NavLink to="/chat" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                        <MessageSquare size={20} />
-                        <span>Chat</span>
-                    </NavLink>
                     <NavLink to="/summarize" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <FileText size={20} />
                         <span>Summary</span>
@@ -45,6 +41,10 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
                     <NavLink to="/translate" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <Languages size={20} />
                         <span>Translate</span>
+                    </NavLink>
+                    <NavLink to="/chat" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        <MessageSquare size={20} />
+                        <span>Chat</span>
                     </NavLink>
                 </nav>
             )}
