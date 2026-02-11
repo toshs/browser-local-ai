@@ -207,10 +207,15 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
                 <textarea
                     value={input}
                     onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                    placeholder="Type a message..."
-                    rows={1}
-                    style={{ resize: 'none', minHeight: '40px' }}
+                    onKeyDown={e => {
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            handleSend();
+                        }
+                    }}
+                    placeholder="Type a message (Ctrl+Enter to send)..."
+                    rows={3}
+                    style={{ resize: 'vertical', minHeight: '60px', padding: '0.75rem' }}
                 />
                 <button onClick={handleSend} disabled={loading || !input.trim() || availability === 'no'} className="primary">
                     <Send size={18} />
