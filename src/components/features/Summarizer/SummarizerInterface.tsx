@@ -103,15 +103,15 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
     // Define options with descriptions
     const typeOptions: Option[] = [
         { value: 'key-points', label: 'Key Points', description: 'Extracts the main points.' },
-        { value: 'tldr', label: 'TL;DR', description: 'Too Long; Didn\'t Read. A very concise summary.' },
-        { value: 'teaser', label: 'Teaser', description: 'A short preview to entice reading.' },
-        { value: 'headline', label: 'Headline', description: 'A single, catchy headline.' }
+        { value: 'tldr', label: 'TL;DR', description: 'Very concise summary.' },
+        { value: 'teaser', label: 'Teaser', description: 'A short preview.' },
+        { value: 'headline', label: 'Headline', description: 'A catchy headline.' }
     ];
 
     const lengthOptions: Option[] = [
-        { value: 'short', label: 'Short', description: 'Brief and to the point.' },
-        { value: 'medium', label: 'Medium', description: 'Balanced detail.' },
-        { value: 'long', label: 'Long', description: 'Detailed summary.' }
+        { value: 'short', label: 'Short', description: 'Brief.' },
+        { value: 'medium', label: 'Medium', description: 'Balanced.' },
+        { value: 'long', label: 'Long', description: 'Detailed.' }
     ];
 
     const formatOptions: Option[] = [
@@ -120,9 +120,9 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
     ];
 
     const languageOptions: Option[] = [
-        { value: 'en', label: 'English', description: 'English.' },
-        { value: 'ja', label: 'Japanese', description: '日本語。' },
-        { value: 'es', label: 'Spanish', description: 'Español.' }
+        { value: 'en', label: 'English' },
+        { value: 'ja', label: 'Japanese' },
+        { value: 'es', label: 'Spanish' }
     ];
 
     return (

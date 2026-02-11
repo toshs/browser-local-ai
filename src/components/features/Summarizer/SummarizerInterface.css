@@ -8,10 +8,16 @@
 
 .controls-group {
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping */
+    flex-wrap: wrap;
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
-    align-items: flex-end; /* Align to bottom */
+    align-items: flex-end;
+}
+
+/* Ensure the absolute dropdown for the last item doesn't push right beyond bounds */
+.controls-group > *:last-child .selector-dropdown {
+    left: auto;
+    right: 0;
 }
 
 .controls-group > * {

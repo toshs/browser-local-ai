@@ -68,7 +68,7 @@ export const LanguageSelector = ({
                 onClick={() => setIsOpen(!isOpen)}
                 type="button"
             >
-                <span className="selected-value text-ellipsis">
+                <span className="language-selected-value text-ellipsis">
                     {selectedOption ? (
                         <>
                             {selectedOption.name}

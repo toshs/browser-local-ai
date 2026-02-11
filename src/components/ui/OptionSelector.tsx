@@ -43,7 +43,7 @@ export const OptionSelector = ({ value, onChange, options, label, className = ''
             {label && <label className="selector-label">{label}</label>}
 
             <div className="selector-trigger" onClick={() => setIsOpen(!isOpen)}>
-                <div className="selected-value">
+                <div className="option-selected-value">
                     <span className="main-label">{selectedOption.label}</span>
                 </div>
                 <ChevronDown size={14} className={`dropdown-icon ${isOpen ? 'open' : ''}`} />
