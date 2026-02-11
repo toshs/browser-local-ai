@@ -52,7 +52,7 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   overflow-y: auto; /* Allow content to grow and scroll on mobile */
-  padding: var(--spacing-md);
+  padding: 0.5rem;
   position: relative;
 }
 
@@ -124,14 +124,32 @@ html, body, #root {
   object-fit: contain;
 }
 
+.logo-text-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 .logo-text {
   font-size: 1.1rem;
   font-weight: 700;
-  background: linear-gradient(to right, hsl(152, 60%, 42%), hsl(170, 55%, 45%));
+  background: linear-gradient(to right, hsl(152, 70%, 30%), hsl(170, 70%, 35%));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
+  line-height: 1.1;
+}
+
+.logo-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: hsl(152, 60%, 35%);
+    background: hsla(152, 60%, 42%, 0.1);
+    padding: 1px 6px;
+    border-radius: 999px;
+    width: fit-content;
+    margin-top: 1px;
 }
 
 /* Desktop Queries */

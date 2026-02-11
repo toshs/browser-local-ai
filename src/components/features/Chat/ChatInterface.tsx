@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAI } from '../../../hooks/useAI';
 import { useChatHistory, type Message } from '../../../hooks/useChatHistory';
-import { Send, Copy, Check, Zap, Radio, StopCircle, Plus, History, Trash2, X } from 'lucide-react';
+import { Send, Copy, Check, Zap, Radio, StopCircle, Plus, History, Trash2, X, Maximize2, AlertCircle, Loader2, MessageSquare } from 'lucide-react';
 import './ChatInterface.css';
 import { DownloadOverlay } from '../../ui/DownloadOverlay';
 import * as smd from 'streaming-markdown';
@@ -20,9 +20,13 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [useStreaming, setUseStreaming] = useState(true);
     const [showHistory, setShowHistory] = useState(false);
+    const [isInputExpanded, setIsInputExpanded] = useState(false);
+    const [streamingContent, setStreamingContent] = useState<string | null>(null);
     const endRef = useRef<HTMLDivElement>(null);
     const streamTargetRef = useRef<HTMLDivElement>(null);
     const parserRef = useRef<smd.Parser | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Sync initialInput changes (e.g. from context menu actions)
     useEffect(() => {
@@ -31,24 +35,32 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         }
     }, [initialInput]);
 
+    // Focus expanded textarea when it opens
+    useEffect(() => {
+        if (isInputExpanded && expandedTextareaRef.current) {
+            expandedTextareaRef.current.focus();
+            // Move cursor to end
+            const len = expandedTextareaRef.current.value.length;
+            expandedTextareaRef.current.setSelectionRange(len, len);
+        }
+    }, [isInputExpanded]);
+
     const handleCopy = useCallback(async (text: string, id: string) => {
         await navigator.clipboard.writeText(text);
         setCopiedId(id);
         setTimeout(() => setCopiedId(null), 2000);
     }, []);
 
+    const handleSend = async (customInput?: string) => {
+        const textToSend = customInput !== undefined ? customInput : input;
+        if (!textToSend.trim() || loading || !currentSession) return;
 
-    // We need a local state for the streaming content that hasn't been saved to history yet
-    const [streamingContent, setStreamingContent] = useState<string | null>(null);
-
-    const handleSend = async () => {
-        if (!input.trim() || loading || !currentSession) return;
-
-        const userText = input;
+        const userText = textToSend;
         const userMsg: Message = { id: Date.now().toString(), role: 'user', text: userText, timestamp: Date.now() };
 
         addMessageToSession(currentSession.id, userMsg);
         setInput('');
+        setIsInputExpanded(false);
         setLoading(true);
 
         try {
@@ -85,7 +97,7 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
             } else {
                 // If aborted, save what we have so far
                 if (useStreaming && streamingContent) { // streamingContent ref might be better but state is usually fine here as we await
-                    const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: streamingContent + " [Aborted]", timestamp: Date.now() };
+                    const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'ai', text: (streamingContent || '') + " [Aborted]", timestamp: Date.now() };
                     addMessageToSession(currentSession.id, aiMsg);
                 }
             }
@@ -102,8 +114,6 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
     const handleStop = () => {
         abort();
         setLoading(false);
-        // Save partial? The catch block handles it if abort throws. 
-        // useAI throws AbortError.
     };
 
     const messages = currentSession?.messages || [];
@@ -120,152 +130,244 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         }
     }, [loading, useStreaming]);
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-            {downloadProgress && (
-                <DownloadOverlay loaded={downloadProgress.loaded} total={downloadProgress.total} />
-            )}
-            {/* Header controls */}
-            <div className="chat-header-controls">
-                <button className="icon-btn" onClick={() => setShowHistory(!showHistory)} title="History">
-                    <History size={18} />
-                </button>
-                <div style={{ flex: 1, textAlign: 'center', fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentSession?.title || 'New Chat'}
+    if (availability === 'unavailable') {
+        return (
+            <div className="chat-interface-wrapper empty-state">
+                <div className="empty-state-content">
+                    <AlertCircle size={48} style={{ color: 'var(--text-secondary)', opacity: 0.5 }} />
+                    <h3>Prompt API Unavailable</h3>
+                    <p>The Prompt API is not available in this browser. Please use Chrome Canary and enable the AI functionalities.</p>
                 </div>
-                <button className="icon-btn" onClick={() => createNewSession()} title="New Chat">
-                    <Plus size={18} />
-                </button>
             </div>
+        );
+    }
 
-            {/* History Sidebar/Overlay */}
-            {showHistory && (
-                <div className="history-overlay">
-                    <div className="history-header">
-                        <span>Chat History</span>
-                        <button onClick={() => setShowHistory(false)}><X size={18} /></button>
-                    </div>
-                    <div className="history-list">
-                        {sessions.map(session => (
-                            <div
-                                key={session.id}
-                                className={`history-item ${session.id === currentSession?.id ? 'active' : ''}`}
-                                onClick={() => { selectSession(session.id); setShowHistory(false); }}
-                            >
-                                <span className="history-title">{session.title}</span>
-                                <button
-                                    className="history-delete"
-                                    onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+    if (availability === 'loading') {
+        return (
+            <div className="chat-interface-wrapper empty-state">
+                <div className="empty-state-content">
+                    <Loader2 className="animate-spin" size={48} style={{ color: 'var(--text-secondary)', opacity: 0.5 }} />
+                    <h3>Checking API Availability...</h3>
                 </div>
-            )}
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingBottom: '0.5rem' }}>
-                {messages.length === 0 && !loading && (
-                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem' }}>
-                        <p>Ask me anything...</p>
-                        <span className={`badge ${availability}`}>AI Status: {availability}</span>
-                        {availability === 'unavailable' && (
-                            <p style={{ fontSize: '0.8rem', marginTop: '1rem', color: 'var(--text-secondary)' }}>
-                                Note: The Prompt API is currently only available in the Chrome Extension version or browsers with the API explicitly enabled.
-                            </p>
-                        )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="chat-interface-wrapper">
+            <div className="chat-container">
+                {downloadProgress && (
+                    <DownloadOverlay loaded={downloadProgress.loaded} total={downloadProgress.total} />
+                )}
+                {/* Header controls */}
+                <div className="chat-header-controls">
+                    <button className="icon-btn" onClick={() => setShowHistory(!showHistory)} title="History">
+                        <History size={18} />
+                    </button>
+                    <div style={{ flex: 1, textAlign: 'center', fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {currentSession?.title || 'New Chat'}
+                    </div>
+                    <button className="icon-btn" onClick={() => createNewSession()} title="New Chat">
+                        <Plus size={18} />
+                    </button>
+                </div>
+
+                {/* History Sidebar/Overlay */}
+                {showHistory && (
+                    <div className="history-overlay">
+                        <div className="history-header">
+                            <span>Chat History</span>
+                            <button onClick={() => setShowHistory(false)}><X size={18} /></button>
+                        </div>
+                        <div className="history-list">
+                            {sessions.map(session => (
+                                <div
+                                    key={session.id}
+                                    className={`history-item ${session.id === currentSession?.id ? 'active' : ''}`}
+                                    onClick={() => { selectSession(session.id); setShowHistory(false); }}
+                                >
+                                    <span className="history-title">{session.title}</span>
+                                    <button
+                                        className="history-delete"
+                                        onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
+                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingBottom: '0.25rem' }}>
+                    {messages.length === 0 && !loading && (
+                        <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginTop: 'auto', marginBottom: 'auto' }}>
+                            <div style={{ opacity: 0.3 }}>
+                                <MessageSquare size={48} />
+                            </div>
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 500 }}>New conversation</p>
+                                <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>Ask me anything to get started</p>
+                            </div>
+                            <span className={`badge ${availability}`}>AI Status: {availability}</span>
+                        </div>
+                    )}
 
-                {messages.map(msg => (
-                    <div key={msg.id} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%', position: 'relative' }}>
-                        <div style={{
-                            background: msg.role === 'user' ? 'var(--primary-color)' : 'var(--surface-color)',
-                            color: msg.role === 'user' ? 'white' : 'var(--text-main)',
-                            padding: '0.75rem',
-                            borderRadius: '12px',
-                            borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
-                            borderBottomLeftRadius: msg.role === 'ai' ? '2px' : '12px',
-                        }}>
-                            {msg.role === 'ai' ? (
-                                <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
-                            ) : (
-                                <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
+                    {messages.map(msg => (
+                        <div key={msg.id} style={{ alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%', position: 'relative' }}>
+                            <div style={{
+                                background: msg.role === 'user' ? 'var(--primary-color)' : 'var(--surface-color)',
+                                color: msg.role === 'user' ? 'white' : 'var(--text-main)',
+                                padding: '0.75rem',
+                                borderRadius: '12px',
+                                borderBottomRightRadius: msg.role === 'user' ? '2px' : '12px',
+                                borderBottomLeftRadius: msg.role === 'ai' ? '2px' : '12px',
+                            }}>
+                                {msg.role === 'ai' ? (
+                                    <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }} />
+                                ) : (
+                                    <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
+                                )}
+                            </div>
+                            {msg.role === 'ai' && (
+                                <button
+                                    onClick={() => handleCopy(msg.text, msg.id)}
+                                    style={{
+                                        position: 'absolute', top: '4px', right: '4px',
+                                        background: 'var(--surface-hover)', padding: '4px',
+                                        borderRadius: '4px', opacity: 0.7,
+                                    }}
+                                    title="Copy"
+                                >
+                                    {copiedId === msg.id ? <Check size={12} /> : <Copy size={12} />}
+                                </button>
                             )}
                         </div>
-                        {msg.role === 'ai' && (
-                            <button
-                                onClick={() => handleCopy(msg.text, msg.id)}
-                                style={{
-                                    position: 'absolute', top: '4px', right: '4px',
-                                    background: 'var(--surface-hover)', padding: '4px',
-                                    borderRadius: '4px', opacity: 0.7,
-                                }}
-                                title="Copy"
-                            >
-                                {copiedId === msg.id ? <Check size={12} /> : <Copy size={12} />}
-                            </button>
-                        )}
-                    </div>
-                ))}
+                    ))}
 
-                {loading && (
-                    <>
-                        {streamingContent !== null ? (
-                            <div style={{
-                                alignSelf: 'flex-start', maxWidth: '85%',
-                                background: 'var(--surface-color)',
-                                padding: '0.75rem', borderRadius: '12px', borderBottomLeftRadius: '2px',
-                            }}>
-                                <div ref={streamTargetRef} className="markdown-body" />
-                            </div>
-                        ) : (
-                            // Thinking state if not streaming yet
-                            useStreaming ? null : (
-                                <div style={{ alignSelf: 'flex-start', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem' }}>
-                                    Thinking...
+                    {loading && (
+                        <>
+                            {streamingContent !== null ? (
+                                <div style={{
+                                    alignSelf: 'flex-start', maxWidth: '85%',
+                                    background: 'var(--surface-color)',
+                                    padding: '0.75rem', borderRadius: '12px', borderBottomLeftRadius: '2px',
+                                }}>
+                                    <div ref={streamTargetRef} className="markdown-body" />
                                 </div>
-                            )
-                        )}
-                    </>
-                )}
-                <div ref={endRef} />
+                            ) : (
+                                // Thinking state if not streaming yet
+                                useStreaming ? null : (
+                                    <div style={{ alignSelf: 'flex-start', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '0.5rem' }}>
+                                        Thinking...
+                                    </div>
+                                )
+                            )}
+                        </>
+                    )}
+                    <div ref={endRef} />
+                </div>
+
+                <div style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', paddingTop: '0.25rem', paddingBottom: '0.5rem', alignItems: 'flex-end' }}>
+                    <button
+                        onClick={() => setUseStreaming(!useStreaming)}
+                        title={useStreaming ? 'Streaming mode (click to switch to prompt)' : 'Prompt mode (click to switch to streaming)'}
+                        style={{
+                            background: 'transparent', padding: '6px',
+                            color: useStreaming ? 'var(--primary-color)' : 'var(--text-secondary)',
+                            flexShrink: 0,
+                            margin: 0
+                        }}
+                    >
+                        {useStreaming ? <Radio size={18} /> : <Zap size={18} />}
+                    </button>
+                    <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'flex-end' }}>
+                        <textarea
+                            ref={textareaRef}
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
+                            }}
+                            placeholder="Type a message (Ctrl+Enter to send)..."
+                            rows={1}
+                            style={{ display: 'block', resize: 'none', minHeight: '42px', maxHeight: '150px', padding: '0.75rem', paddingRight: '2.5rem', width: '100%', cursor: 'text', margin: 0 }}
+                        />
+                        <button
+                            onClick={() => setIsInputExpanded(true)}
+                            title="Expand input"
+                            style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                right: '8px',
+                                background: 'transparent',
+                                padding: '4px',
+                                opacity: 0.5,
+                                color: 'var(--text-secondary)',
+                                margin: 0
+                            }}
+                            className="icon-btn"
+                        >
+                            <Maximize2 size={16} />
+                        </button>
+                    </div>
+                    <button
+                        onClick={loading ? handleStop : () => handleSend()}
+                        disabled={(!input.trim() && !loading)}
+                        className={loading ? "stop-btn" : "primary"}
+                        style={{ margin: 0, height: '42px' }}
+                    >
+                        {loading ? <StopCircle size={18} /> : <Send size={18} />}
+                    </button>
+                </div>
             </div>
 
-            <div style={{ flexShrink: 0, display: 'flex', gap: '0.5rem', paddingTop: '0.5rem', alignItems: 'flex-end' }}>
-                <button
-                    onClick={() => setUseStreaming(!useStreaming)}
-                    title={useStreaming ? 'Streaming mode (click to switch to prompt)' : 'Prompt mode (click to switch to streaming)'}
-                    style={{
-                        background: 'transparent', padding: '6px',
-                        color: useStreaming ? 'var(--primary-color)' : 'var(--text-secondary)',
-                        flexShrink: 0,
-                    }}
-                >
-                    {useStreaming ? <Radio size={18} /> : <Zap size={18} />}
-                </button>
-                <textarea
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={e => {
-                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            handleSend();
-                        }
-                    }}
-                    placeholder="Type a message (Ctrl+Enter to send)..."
-                    rows={3}
-                    style={{ resize: 'vertical', minHeight: '60px', padding: '0.75rem' }}
-                />
-                <button
-                    onClick={loading ? handleStop : handleSend}
-                    disabled={(!input.trim() && !loading) || availability === 'unavailable'}
-                    className={loading ? "stop-btn" : "primary"}
-                >
-                    {loading ? <StopCircle size={18} /> : <Send size={18} />}
-                </button>
-            </div>
+            {/* Expanded Input Overlay */}
+            {isInputExpanded && (
+                <div className="expanded-input-overlay" onClick={() => setIsInputExpanded(false)}>
+                    <div className="expanded-input-content" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>Compose Message</h3>
+                            <button className="icon-btn" onClick={() => setIsInputExpanded(false)}><X size={20} /></button>
+                        </div>
+                        <textarea
+                            ref={expandedTextareaRef}
+                            className="expanded-input-textarea"
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
+                            }}
+                            placeholder="Type your message here..."
+                        />
+                        <div className="expanded-input-actions">
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center', marginRight: 'auto' }}>
+                                Ctrl + Enter to send
+                            </span>
+                            <button
+                                className="secondary"
+                                onClick={() => setIsInputExpanded(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="primary"
+                                onClick={() => handleSend()}
+                                disabled={!input.trim() || loading}
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 };
 
