@@ -1,0 +1,282 @@
+import { useState, useEffect, useRef } from 'react';
+import { useTranslator } from '../../../hooks/useTranslator';
+import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import {
+    Languages,
+    ArrowLeftRight,
+    Copy,
+    Check,
+    Loader2,
+    AlertCircle,
+    Search
+} from 'lucide-react';
+import { SUPPORTED_LANGUAGES } from '../../../services/ai/translate';
+import { detectLanguage } from '../../../services/ai/detect';
+import './TranslatorInterface.css';
+
+interface TranslatorInterfaceProps {
+    initialInput?: string;
+}
+
+export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) => {
+    // Hook returns: { checkAvailability, translate, error, downloadProgress }
+    const {
+        error: translateError,
+        translate,
+    } = useTranslator();
+
+    // Local state
+    const [result, setResult] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
+    // availability needed manually since hook doesn't provide a continuous state for it, or we check on mount
+    const [availability, setAvailability] = useState<'readily' | 'after-download' | 'no' | 'loading'>('loading');
+
+    const [inputText, setInputText] = useState(initialInput || '');
+    const [sourceLang, setSourceLang] = useState('auto');
+    const [targetLang, setTargetLang] = useState('ja');
+    const [copied, setCopied] = useState(false);
+    const [detectedLang, setDetectedLang] = useState<string | null>(null);
+    const [detecting, setDetecting] = useState(false);
+
+    const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const prevInputRef = useRef(inputText);
+
+    const isDesktop = useMediaQuery('(min-width: 768px)');
+
+    // Check availability on mount
+    useEffect(() => {
+        if (typeof Translator !== 'undefined') {
+            Translator.availability({ sourceLanguage: 'en', targetLanguage: 'ja' })
+                .then(available => setAvailability(available))
+                .catch(() => setAvailability('no'));
+        } else {
+            setAvailability('no');
+        }
+    }, []);
+
+    useEffect(() => {
+        if (initialInput) {
+            setInputText(initialInput);
+            handleDetectLanguage(initialInput);
+        }
+    }, [initialInput]);
+
+    // Auto-detect language when user stops typing
+    useEffect(() => {
+        if (detectTimerRef.current) {
+            clearTimeout(detectTimerRef.current);
+        }
+
+        if (sourceLang !== 'auto' || !inputText.trim() || inputText === prevInputRef.current) {
+            if (!inputText.trim()) setDetectedLang(null);
+            prevInputRef.current = inputText;
+            return;
+        }
+
+        prevInputRef.current = inputText;
+
+        detectTimerRef.current = setTimeout(() => {
+            handleDetectLanguage(inputText);
+        }, 800);
+
+        return () => {
+            if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
+        };
+    }, [inputText, sourceLang]);
+
+
+    const handleDetectLanguage = async (text: string) => {
+        if (!text.trim()) return;
+        setDetecting(true);
+        try {
+            const detected = await detectLanguage(text);
+            if (detected && detected.length > 0) {
+                setDetectedLang(detected[0].detectedLanguage);
+            }
+        } catch (e) {
+            console.warn("Detection failed", e);
+        } finally {
+            setDetecting(false);
+        }
+    };
+
+    const handleTranslate = async () => {
+        if (!inputText.trim()) return;
+
+        let actualSource = sourceLang;
+        if (sourceLang === 'auto' && detectedLang) {
+            actualSource = detectedLang;
+        } else if (sourceLang === 'auto') {
+            // Try one more detect
+            const detected = await detectLanguage(inputText);
+            if (detected && detected.length > 0) {
+                actualSource = detected[0].detectedLanguage;
+            } else {
+                actualSource = 'en';
+            }
+        }
+
+        setIsLoading(true);
+        try {
+            const res = await translate(inputText, { sourceLanguage: actualSource, targetLanguage: targetLang });
+            setResult(res);
+        } catch (e) {
+            // error handled by hook
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSwapLanguages = () => {
+        if (sourceLang === 'auto') {
+            if (detectedLang) {
+                setSourceLang(targetLang);
+                setTargetLang(detectedLang);
+            }
+            // if auto and no detection, can't easily swap
+            return;
+        }
+        setSourceLang(targetLang);
+        setTargetLang(sourceLang);
+        if (result) {
+            setInputText(result);
+        }
+    };
+
+    const copyToClipboard = async () => {
+        if (!result) return;
+        await navigator.clipboard.writeText(result);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    if (availability === ('no' as any)) {
+        return (
+            <div className="translator-container empty-state">
+                <div className="empty-state-content">
+                    <AlertCircle size={48} className="text-muted" />
+                    <h3>Translator API Unavailable</h3>
+                    <p>The Translator API is not available in this browser. Please use Chrome Canary and enable the AI functionalities.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`translator-container ${isDesktop ? 'desktop-split' : ''}`}>
+
+            <div className="input-section">
+                <div className="language-selector">
+                    <select
+                        value={sourceLang}
+                        onChange={(e) => { setSourceLang(e.target.value); setDetectedLang(null); }}
+                        className="lang-select"
+                    >
+                        <option value="auto">🔍 Auto Detect</option>
+                        {SUPPORTED_LANGUAGES.map(lang => (
+                            <option key={lang.code} value={lang.code}>
+                                {lang.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    <button
+                        className="swap-btn"
+                        onClick={handleSwapLanguages}
+                        title="Swap languages"
+                        disabled={sourceLang === 'auto' && !detectedLang}
+                    >
+                        <ArrowLeftRight size={16} />
+                    </button>
+
+                    <select
+                        value={targetLang}
+                        onChange={(e) => setTargetLang(e.target.value)}
+                        className="lang-select"
+                    >
+                        {SUPPORTED_LANGUAGES.map(lang => (
+                            <option key={lang.code} value={lang.code}>
+                                {lang.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {(detectedLang || detecting) && (
+                    <div className="detected-lang-info">
+                        <Search size={12} style={{ marginRight: 4 }} />
+                        {detecting ? (
+                            <span>Detecting...</span>
+                        ) : (
+                            <span>Detected: {SUPPORTED_LANGUAGES.find(l => l.code === detectedLang)?.name || detectedLang}</span>
+                        )}
+                        {detectedLang && sourceLang === 'auto' && (
+                            <button
+                                className="text-btn"
+                                onClick={() => setSourceLang(detectedLang)}
+                                style={{ marginLeft: 8 }}
+                            >
+                                Use
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                <div className="input-area">
+                    <textarea
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder="Enter text to translate..."
+                        className="source-input"
+                    />
+                </div>
+
+                <button
+                    className="translate-btn"
+                    onClick={handleTranslate}
+                    disabled={isLoading || !inputText.trim()}
+                >
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="animate-spin" size={16} />
+                            <span>Translating...</span>
+                        </>
+                    ) : (
+                        <>
+                            <Languages size={16} />
+                            <span>Translate</span>
+                        </>
+                    )}
+                </button>
+            </div>
+
+            <div className={`result-section ${!result && !isDesktop ? 'mobile-hidden-result' : ''}`}>
+                <div className="translation-result">
+                    <div className="result-header">
+                        <span className="result-label">Translation</span>
+                        <button
+                            className="action-btn icon-only"
+                            onClick={copyToClipboard}
+                            title="Copy to clipboard"
+                            disabled={!result}
+                        >
+                            {copied ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                    </div>
+                    <div className="result-content">
+                        {translateError ? (
+                            <div className="error-message">
+                                <AlertCircle size={16} />
+                                <span>{translateError}</span>
+                            </div>
+                        ) : (
+                            <div className="translated-text">
+                                {result || <span className="placeholder-text">Translation will appear here...</span>}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

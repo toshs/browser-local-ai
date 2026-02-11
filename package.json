@@ -4,14 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build --watch",
+    "dev:web": "vite dev --config vite.web.config.ts",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build:web": "tsc -b && vite build --config vite.web.config.ts",
+    "preview": "vite preview",
+    "preview:web": "vite preview --config vite.web.config.ts --outDir dist-web",
+    "lint": "eslint ."
   },
   "dependencies": {
+    "lucide-react": "^0.563.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.13.0",
+    "streaming-markdown": "^0.2.15"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "2.0.0-beta.33",

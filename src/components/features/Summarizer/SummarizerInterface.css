@@ -1,0 +1,206 @@
+.summarizer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    overflow-y: auto;
+}
+
+.controls-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.control-item label {
+    font-size: var(--font-xs);
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.control-item select {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface-color);
+    font-size: var(--font-sm);
+    color: var(--text-primary);
+}
+
+.input-area {
+    flex-shrink: 0;
+}
+
+.source-input {
+    width: 100%;
+    min-height: 100px;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    resize: vertical;
+    font-family: inherit;
+    font-size: var(--font-sm);
+    background: white;
+}
+
+.source-input:focus {
+    outline: 2px solid var(--primary-color);
+    border-color: transparent;
+}
+
+.summarize-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.summarize-btn:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
+
+.summarize-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.summary-result {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    min-height: 200px;
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-color);
+}
+
+.result-label {
+    font-size: var(--font-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.markdown-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    font-size: var(--font-sm);
+    line-height: 1.6;
+}
+
+.markdown-content h1, 
+.markdown-content h2, 
+.markdown-content h3 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+
+.markdown-content p {
+    margin-bottom: 1em;
+}
+
+.markdown-content ul, 
+.markdown-content ol {
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+}
+
+.empty-state {
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.empty-state-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    max-width: 80%;
+}
+
+.empty-state h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+
+/* Desktop Split Layout */
+.summarizer-container.desktop-split {
+    flex-direction: row;
+    overflow: hidden; /* Container doesn't scroll, panels do */
+}
+
+.desktop-split .input-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    overflow-y: auto;
+    padding-right: var(--spacing-sm); /* Visual separation */
+}
+
+.desktop-split .result-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.desktop-split .input-area {
+    flex: 1; /* Input grows to fill available space in left column */
+    display: flex;
+    flex-direction: column;
+}
+
+.desktop-split .source-input {
+    flex: 1;
+    min-height: 0; /* Allow shrinking */
+    height: 100%;
+    resize: none;
+}
+
+.empty-result-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    background: var(--surface-color);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+}
