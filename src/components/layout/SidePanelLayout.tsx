@@ -15,6 +15,10 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
                     <h1 className="logo-text">Browser Local AI</h1>
 
                     <nav className="header-nav">
+                        <NavLink to="/chat" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                            <MessageSquare size={18} />
+                            <span>Chat</span>
+                        </NavLink>
                         <NavLink to="/summarize" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                             <FileText size={18} />
                             <span>Summary</span>
@@ -52,6 +56,10 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
             {/* Mobile-only bottom nav for Web (hidden on desktop via CSS) */}
             {isWeb && (
                 <nav className="layout-nav mobile-only">
+                    <NavLink to="/chat" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                        <MessageSquare size={20} />
+                        <span>Chat</span>
+                    </NavLink>
                     <NavLink to="/summarize" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                         <FileText size={20} />
                         <span>Summary</span>

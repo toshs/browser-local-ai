@@ -82,7 +82,7 @@ function App() {
     <HashRouter>
       <SidePanelLayout isWeb={isWeb}>
         <Routes>
-          <Route path="/" element={<Navigate to="/summarize" replace />} />
+          <Route path="/" element={<Navigate to="/chat" replace />} />
         </Routes>
         <ContextHandler />
       </SidePanelLayout>
