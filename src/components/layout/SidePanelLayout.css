@@ -15,6 +15,12 @@ html, body, #root {
   margin: 0 auto;
 }
 
+@media (min-width: 768px) {
+  .layout-container {
+    overflow: visible;
+  }
+}
+
 /* Desktop Web Mode */
 .layout-container.web-mode {
     max-width: none; /* Remove max-width constraint */
@@ -52,7 +58,7 @@ html, body, #root {
 
 @media (min-width: 768px) {
   .layout-content {
-    overflow: hidden; /* Lock height on desktop for fixed layouts */
+    overflow: visible; /* Lock height on desktop for fixed layouts */
   }
 }
 
@@ -104,6 +110,18 @@ html, body, #root {
     padding: var(--spacing-sm);
     gap: 4px;
     flex: 1;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .logo-text {

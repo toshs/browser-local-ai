@@ -4,6 +4,7 @@
     min-height: 100%; /* Use min-height to allow growth on mobile */
     gap: var(--spacing-md);
     padding: 0;
+    position: relative; /* For absolute overlay */
     /* On mobile, we let the external container (or page) handle scrolling */
 }
 
@@ -183,7 +184,7 @@
 @media (min-width: 768px) {
     .translator-container {
         height: 100%;
-        overflow-y: auto;
+        overflow: visible;
     }
     
     .result-content {
@@ -200,7 +201,7 @@
         height: 100%; /* Restore fixed height */
         gap: var(--spacing-md);
         padding: var(--spacing-lg);
-        overflow: hidden; /* Container fixed */
+        overflow: visible; /* Container fixed */
     }
 
     .translator-container.desktop-3-col .layout-section {

@@ -5,7 +5,7 @@ export const checkTranslator = async (options: AITranslatorCreateOptions): Promi
     console.log('[Translator Check] Checking Translator...', options);
     if (typeof Translator === 'undefined') {
         console.log('[Translator Check] Translator is undefined');
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
     try {
         const available = await Translator.availability(options);
@@ -13,7 +13,7 @@ export const checkTranslator = async (options: AITranslatorCreateOptions): Promi
         return { available };
     } catch (e) {
         console.error('[Translator Check] Error:', e);
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
 };
 
@@ -40,7 +40,7 @@ export const translateText = async (
     onProgress?: OnDownloadProgress,
 ) => {
     const status = await checkTranslator(options);
-    if (status.available === 'no') {
+    if (status.available === 'unavailable') {
         throw new Error(`Translation not available for ${options.sourceLanguage} to ${options.targetLanguage}`);
     }
 
@@ -48,10 +48,13 @@ export const translateText = async (
     const translator = await Translator.create({
         ...options,
         monitor(m: AIMonitor) {
-            m.addEventListener('downloadprogress', (e) => {
-                console.log(`[Translator] Downloaded ${e.loaded} / ${e.total}`);
-                onProgress?.({ loaded: e.loaded, total: e.total });
-            });
+            // Only attach listener if download is actually needed
+            if (status.available === 'downloadable' || status.available === 'downloading') {
+                m.addEventListener('downloadprogress', (e) => {
+                    console.log(`[Translator] Downloaded ${e.loaded} / ${e.total}`);
+                    onProgress?.({ loaded: e.loaded, total: e.total });
+                });
+            }
         }
     });
 

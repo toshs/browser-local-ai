@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { OptionSelector, type Option } from '../../ui/OptionSelector';
 import './SummarizerInterface.css';
+import { DownloadOverlay } from '../../ui/DownloadOverlay';
 
 interface SummarizerInterfaceProps {
     initialInput?: string;
@@ -12,7 +13,7 @@ interface SummarizerInterfaceProps {
 
 export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) => {
     // Hooks return { availability, summarize, error, downloadProgress }
-    const { availability, summarize, error: hookError } = useSummarizer();
+    const { availability, summarize, error: hookError, downloadProgress } = useSummarizer();
 
     // Local state for results since hook doesn't store them
     const [result, setResult] = useState<string>('');
@@ -127,6 +128,9 @@ export const SummarizerInterface = ({ initialInput }: SummarizerInterfaceProps) 
 
     return (
         <div className={`summarizer-container ${isDesktop ? 'desktop-split' : ''}`}>
+            {downloadProgress && (
+                <DownloadOverlay loaded={downloadProgress.loaded} total={downloadProgress.total} />
+            )}
             <div className="input-section">
                 <div className="controls-group">
                     <OptionSelector

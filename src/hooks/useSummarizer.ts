@@ -22,6 +22,8 @@ export const useSummarizer = () => {
         } catch (e: any) {
             setError(e.message || 'Unknown error');
             throw e;
+        } finally {
+            setDownloadProgress(null);
         }
     }, []);
 

@@ -5,7 +5,7 @@ export const checkSummarizer = async (): Promise<AISummarizerCapabilities> => {
     console.log('[Summarizer Check] Checking Summarizer...');
     if (typeof Summarizer === 'undefined') {
         console.log('[Summarizer Check] Summarizer is undefined');
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
     try {
         const available = await Summarizer.availability();
@@ -13,7 +13,7 @@ export const checkSummarizer = async (): Promise<AISummarizerCapabilities> => {
         return { available };
     } catch (e) {
         console.error('[Summarizer Check] Error:', e);
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
 };
 
@@ -23,7 +23,7 @@ export const summarizeText = async (
     onProgress?: OnDownloadProgress,
 ) => {
     const status = await checkSummarizer();
-    if (status.available === 'no') {
+    if (status.available === 'unavailable') {
         throw new Error('Summarizer API not available');
     }
 
@@ -31,10 +31,13 @@ export const summarizeText = async (
     const summarizer = await Summarizer.create({
         ...options,
         monitor(m: AIMonitor) {
-            m.addEventListener('downloadprogress', (e) => {
-                console.log(`[Summarizer] Downloaded ${e.loaded} / ${e.total}`);
-                onProgress?.({ loaded: e.loaded, total: e.total });
-            });
+            // Only attach listener if download is actually needed
+            if (status.available === 'downloadable' || status.available === 'downloading') {
+                m.addEventListener('downloadprogress', (e) => {
+                    console.log(`[Summarizer] Downloaded ${e.loaded} / ${e.total}`);
+                    onProgress?.({ loaded: e.loaded, total: e.total });
+                });
+            }
         }
     });
 

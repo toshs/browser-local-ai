@@ -21,6 +21,8 @@ export const useTranslator = () => {
         } catch (e: any) {
             setError(e.message || 'Unknown error');
             throw e;
+        } finally {
+            setDownloadProgress(null);
         }
     }, []);
 

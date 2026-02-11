@@ -4,6 +4,7 @@
     min-height: 100%; /* Allow growth on mobile */
     gap: var(--spacing-md);
     padding: 0;
+    position: relative; /* For absolute overlay */
 }
 
 .controls-group {

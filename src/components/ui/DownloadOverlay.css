@@ -1,0 +1,104 @@
+.download-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    pointer-events: none; /* Don't block interaction with the rest of the page */
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.download-toast {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    width: 280px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    pointer-events: auto; /* Allow interaction with the toast if needed */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toast-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, hsla(152, 60%, 42%, 0.15) 0%, hsla(152, 60%, 42%, 0.05) 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-title {
+    margin: 0 0 4px 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.toast-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-variant-numeric: tabular-nums;
+    align-items: center; /* Align items vertically */
+}
+
+.toast-note {
+    font-size: 0.65rem;
+    opacity: 0.8;
+}
+
+.toast-percent {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.toast-progress-track {
+    height: 4px;
+    background: var(--surface-hover);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.toast-progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+@keyframes slideInRight {
+    from { 
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-bounce {
+    animation: smallBounce 2s infinite;
+}
+
+@keyframes smallBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}

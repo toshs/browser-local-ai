@@ -1,7 +1,7 @@
 // Chrome Built-in AI: LanguageModel, Summarizer, Translator, LanguageDetector globals
 
 export interface AILanguageModelCapabilities {
-    available: 'readily' | 'after-download' | 'no';
+    available: 'available' | 'downloadable' | 'downloading' | 'unavailable';
     defaultTopK?: number;
     maxTopK?: number;
     defaultTemperature?: number;
@@ -34,7 +34,7 @@ export interface AILanguageModelSession {
 }
 
 export interface AISummarizerCapabilities {
-    available: 'readily' | 'after-download' | 'no';
+    available: 'available' | 'downloadable' | 'downloading' | 'unavailable';
 }
 
 export interface AISummarizerCreateOptions {
@@ -55,7 +55,7 @@ export interface AISummarizerSession {
 }
 
 export interface AITranslatorCapabilities {
-    available: 'readily' | 'after-download' | 'no';
+    available: 'available' | 'downloadable' | 'downloading' | 'unavailable';
 }
 
 export interface AITranslatorCreateOptions {
@@ -98,11 +98,11 @@ declare global {
 
     const Translator: {
         availability(options: AITranslatorCreateOptions): Promise<AITranslatorCapabilities['available']>;
-        create(options: AITranslatorCreateOptions): Promise<AITranslatorSession>;
+        create(options?: AITranslatorCreateOptions): Promise<AITranslatorSession>;
     };
 
     const LanguageDetector: {
-        availability(): Promise<'readily' | 'after-download' | 'no'>;
+        availability(): Promise<'available' | 'downloadable' | 'downloading' | 'unavailable'>;
         create(options?: { monitor?: (monitor: AIMonitor) => void }): Promise<AILanguageDetectorSession>;
     };
 }

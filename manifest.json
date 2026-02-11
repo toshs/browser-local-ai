@@ -21,8 +21,8 @@
     "default_title": "Open Browser Local AI"
   },
   "icons": {
-    "16": "public/vite.svg",
-    "48": "public/vite.svg",
-    "128": "public/vite.svg"
+    "16": "public/icon.png",
+    "48": "public/icon.png",
+    "128": "public/icon.png"
   }
 }

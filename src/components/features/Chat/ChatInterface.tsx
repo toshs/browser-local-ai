@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAI } from '../../../hooks/useAI';
-import { useChatHistory, Message } from '../../../hooks/useChatHistory';
-import { Send, Download, Copy, Check, Zap, Radio, StopCircle, Plus, History, Trash2, X } from 'lucide-react';
+import { useChatHistory, type Message } from '../../../hooks/useChatHistory';
+import { Send, Copy, Check, Zap, Radio, StopCircle, Plus, History, Trash2, X } from 'lucide-react';
 import './ChatInterface.css';
+import { DownloadOverlay } from '../../ui/DownloadOverlay';
 import * as smd from 'streaming-markdown';
 
 
@@ -36,20 +37,6 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         setTimeout(() => setCopiedId(null), 2000);
     }, []);
 
-    const handleSendStreaming = async (text: string) => {
-        if (!currentSession) return;
-        const aiMsgId = (Date.now() + 1).toString();
-
-        // Optimistically add empty AI message for streaming
-        // Actually, we can't easily update the message in place with useChatHistory nicely without a lot of updates.
-        // Better to keep local state for streaming, then save to history on completion?
-        // OR: Update history repeatedly. Let's try update history repeatedly but debounced? 
-        // For simplicity: We will build the string locally, then add to session at the end.
-        // BUT: We want to show it streaming. 
-        // HYBRID: We have a "streamingMessage" state.
-    };
-
-    const handleSendPrompt = async (text: string) => { };
 
     // We need a local state for the streaming content that hasn't been saved to history yet
     const [streamingContent, setStreamingContent] = useState<string | null>(null);
@@ -125,7 +112,6 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
 
-    // Initialize streaming markdown parser when loading starts (streaming mode only)
     useEffect(() => {
         if (loading && useStreaming && streamTargetRef.current) {
             streamTargetRef.current.innerHTML = '';
@@ -134,12 +120,11 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
         }
     }, [loading, useStreaming]);
 
-    const progressPercent = downloadProgress
-        ? Math.round((downloadProgress.loaded / downloadProgress.total) * 100)
-        : null;
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            {downloadProgress && (
+                <DownloadOverlay loaded={downloadProgress.loaded} total={downloadProgress.total} />
+            )}
             {/* Header controls */}
             <div className="chat-header-controls">
                 <button className="icon-btn" onClick={() => setShowHistory(!showHistory)} title="History">
@@ -226,20 +211,6 @@ export const ChatInterface = ({ initialInput }: ChatInterfaceProps) => {
 
                 {loading && (
                     <>
-                        {progressPercent !== null && (
-                            <div style={{ maxWidth: '85%' }}>
-                                <div className="card" style={{ padding: '0.5rem', marginBottom: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                        <Download size={14} />
-                                        <span>Downloading model... {progressPercent}%</span>
-                                    </div>
-                                    <div style={{ marginTop: '0.25rem', height: '4px', borderRadius: '2px', background: 'var(--surface-hover)', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: `${progressPercent}%`, background: 'var(--primary-color)', borderRadius: '2px', transition: 'width 0.3s ease' }} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        )}
                         {streamingContent !== null ? (
                             <div style={{
                                 alignSelf: 'flex-start', maxWidth: '85%',

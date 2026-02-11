@@ -7,7 +7,7 @@ export const checkAI = async (): Promise<AILanguageModelCapabilities> => {
     console.log('[AI Check] Checking LanguageModel...');
     if (typeof LanguageModel === 'undefined') {
         console.log('[AI Check] LanguageModel is undefined');
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
     try {
         const available = await LanguageModel.availability();
@@ -15,7 +15,7 @@ export const checkAI = async (): Promise<AILanguageModelCapabilities> => {
         return { available };
     } catch (e) {
         console.error('[AI Check] Error checking availability:', e);
-        return { available: 'no' as const };
+        return { available: 'unavailable' };
     }
 };
 
@@ -26,15 +26,20 @@ const ensureSession = async (onProgress?: OnDownloadProgress): Promise<AILanguag
         console.log('[AI] Creating new session...');
         // Lower temperature and topK for much more stable and coherent output.
         // temperature: 0 makes it deterministic (focused), topK: 1 picks the most likely word.
+        const params = await LanguageModel.params();
+        const availability = await LanguageModel.availability();
+
         currentSession = await LanguageModel.create({
             systemPrompt: "You are a helpful, clear, and concise assistant. Always respond in the language used by the user.",
-            temperature: 0.2,
-            topK: 5,
+            temperature: params.defaultTemperature,
+            topK: params.defaultTopK,
             monitor(m: AIMonitor) {
-                m.addEventListener('downloadprogress', (e) => {
-                    console.log(`[AI] Downloaded ${e.loaded} / ${e.total}`);
-                    onProgress?.({ loaded: e.loaded, total: e.total });
-                });
+                if (availability === 'downloadable' || availability === 'downloading') {
+                    m.addEventListener('downloadprogress', (e) => {
+                        console.log(`[AI] Downloaded ${e.loaded} / ${e.total}`);
+                        onProgress?.({ loaded: e.loaded, total: e.total });
+                    });
+                }
             }
         });
         console.log('[AI] Session created');
@@ -45,15 +50,17 @@ const ensureSession = async (onProgress?: OnDownloadProgress): Promise<AILanguag
 export const generateText = async (
     prompt: string,
     onProgress?: OnDownloadProgress,
+    signal?: AbortSignal,
 ): Promise<string> => {
     const status = await checkAI();
-    if (status.available === 'no') {
+    if (status.available === 'unavailable') {
         throw new Error("AI model is not available on this browser.");
     }
 
     try {
         const session = await ensureSession(onProgress);
-        const result = await session.prompt(prompt);
+        const result = await session.prompt(prompt, { signal });
+        console.log('[AI] Prompt result:', result);
         return result;
     } catch (e) {
         console.error('[AI] Prompt failed:', e);
@@ -65,27 +72,25 @@ export const generateText = async (
 export const generateTextStream = async function* (
     prompt: string,
     onProgress?: OnDownloadProgress,
+    signal?: AbortSignal,
 ): AsyncGenerator<string> {
     const status = await checkAI();
-    if (status.available === 'no') {
+    if (status.available === 'unavailable') {
         throw new Error("AI model is not available on this browser.");
     }
 
     try {
         const session = await ensureSession(onProgress);
-        const stream = session.promptStreaming(prompt);
+        const stream = session.promptStreaming(prompt, { signal });
         const reader = stream.getReader();
 
         let previousText = '';
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+            console.log('[AI] Stream chunk:', value);
             // promptStreaming returns accumulated text, so extract the new chunk
-            const newChunk = value.slice(previousText.length);
-            previousText = value;
-            if (newChunk) {
-                yield newChunk;
-            }
+            yield value;
         }
     } catch (e) {
         console.error('[AI] Stream failed:', e);

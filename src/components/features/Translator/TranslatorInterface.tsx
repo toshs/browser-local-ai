@@ -13,6 +13,7 @@ import { SUPPORTED_LANGUAGES } from '../../../services/ai/translate';
 import { detectLanguage } from '../../../services/ai/detect';
 import { LanguageSelector } from '../../ui/LanguageSelector';
 import './TranslatorInterface.css';
+import { DownloadOverlay } from '../../ui/DownloadOverlay';
 
 interface TranslatorInterfaceProps {
     initialInput?: string;
@@ -23,6 +24,7 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
     const {
         error: translateError,
         translate,
+        downloadProgress
     } = useTranslator();
 
     // Local state
@@ -181,6 +183,9 @@ export const TranslatorInterface = ({ initialInput }: TranslatorInterfaceProps) 
 
     return (
         <div className={`translator-container ${isDesktop ? 'desktop-3-col' : ''}`}>
+            {downloadProgress && (
+                <DownloadOverlay loaded={downloadProgress.loaded} total={downloadProgress.total} />
+            )}
 
             {/* Column 1 (Desktop) / Top (Mobile): Input */}
             <div className="layout-section input-section">

@@ -12,7 +12,10 @@ export const SidePanelLayout = ({ children, isWeb = false }: SidePanelLayoutProp
         <div className={`layout-container ${isWeb ? 'web-mode' : ''}`}>
             {isWeb && (
                 <header className="layout-header">
-                    <h1 className="logo-text">Browser Local AI</h1>
+                    <div className="logo-container">
+                        <img src="/icon.png" alt="Browser Local AI Logo" className="logo-icon" />
+                        <h1 className="logo-text">Browser Local AI</h1>
+                    </div>
 
                     <nav className="header-nav">
                         <NavLink to="/chat" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>

@@ -33,6 +33,7 @@ export const useAI = () => {
             throw e;
         } finally {
             abortControllerRef.current = null;
+            setDownloadProgress(null);
         }
     }, []);
 
@@ -64,6 +65,7 @@ export const useAI = () => {
             throw e;
         } finally {
             abortControllerRef.current = null;
+            setDownloadProgress(null);
         }
     }, []);
 
